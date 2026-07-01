@@ -5,7 +5,7 @@ import time
 import asyncio
 import logging
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -151,6 +151,7 @@ async def create_workflow(data: WorkflowCreate):
         drop_folders=data.drop_folders,
     )
     storage.create_workflow(wf)
+    await broadcast_log(f"Workflow created: '{wf.name}' ({wf.id})", "success")
     return wf.to_dict()
 
 
@@ -274,6 +275,7 @@ async def submit_job(data: JobCreate):
         job.variables[name] = val
 
     storage.create_job(job)
+    await broadcast_log(f"Job submitted: {job.id[:8]} to workflow '{wf.name}' ({data.inputfile or 'monitor'})", "info")
     engine.start_job(job)
 
     return {
@@ -418,7 +420,7 @@ async def browse_files(path: str = "/"):
 
 
 @app.post("/api/files/upload")
-async def upload_file(file: UploadFile = File(...), path: str = "/"):
+async def upload_file(file: UploadFile = File(...), path: str = Form("/")):
     try:
         dest_dir = Path(path).resolve()
         if not dest_dir.exists():
@@ -427,9 +429,11 @@ async def upload_file(file: UploadFile = File(...), path: str = "/"):
         content = await file.read()
         with open(dest_file, "wb") as f:
             f.write(content)
+        await broadcast_log(f"File uploaded: {file.filename} ({len(content)} bytes) to {dest_dir}", "success")
         return {"status": "ok", "path": str(dest_file), "size": len(content)}
     except Exception as e:
         logger.error(f"Upload error: {e}")
+        await broadcast_log(f"Upload failed: {file.filename} - {e}", "error")
         raise HTTPException(500, str(e))
 
 
@@ -439,6 +443,7 @@ async def download_file(path: str):
         p = Path(path).resolve()
         if not p.exists() or not p.is_file():
             raise HTTPException(404, "File not found")
+        await broadcast_log(f"File download: {p.name}", "info")
         from fastapi.responses import FileResponse
         return FileResponse(path=str(p), filename=p.name)
     except HTTPException:
@@ -481,6 +486,14 @@ async def get_settings():
 ws_clients: list[WebSocket] = []
 
 
+async def broadcast_log(message: str, level: str = "info"):
+    for ws in ws_clients[:]:
+        try:
+            await ws.send_text(json.dumps({"type": "server_log", "message": message, "level": level}))
+        except Exception:
+            pass
+
+
 @app.websocket("/ws/events")
 async def websocket_events(websocket: WebSocket):
     await websocket.accept()
@@ -494,12 +507,17 @@ async def websocket_events(websocket: WebSocket):
                     await websocket.send_text(json.dumps({"type": "pong"}))
             except asyncio.TimeoutError:
                 pass
-            active_jobs = storage.get_running_jobs()
-            if active_jobs:
-                await websocket.send_text(json.dumps({
-                    "type": "jobs_update",
-                    "data": active_jobs,
-                }))
+            except Exception:
+                break
+            try:
+                active_jobs = storage.get_running_jobs()
+                if active_jobs:
+                    await websocket.send_text(json.dumps({
+                        "type": "jobs_update",
+                        "data": active_jobs,
+                    }))
+            except Exception:
+                pass
             await asyncio.sleep(2)
     except WebSocketDisconnect:
         pass

@@ -1,27 +1,70 @@
 let editor = null;
 let currentSection = 'dashboard';
 let allWorkflows = [];
+let logCollapsed = false;
+let logCount = 0;
+
+function addLogEntry(msg, type) {
+    const body = document.getElementById('activity-log-body');
+    if (!body) return;
+    const line = document.createElement('div');
+    line.className = 'activity-log-line activity-log-' + (type || 'info');
+    const time = new Date().toLocaleTimeString();
+    line.innerHTML = `<span class="activity-log-time">${time}</span>${msg}`;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+    logCount++;
+    const countEl = document.getElementById('log-count');
+    if (countEl) countEl.textContent = logCount;
+    if (body.children.length > 200) body.removeChild(body.firstChild);
+}
+
+function toggleActivityLog() {
+    const body = document.getElementById('activity-log-body');
+    logCollapsed = !logCollapsed;
+    body.classList.toggle('collapsed', logCollapsed);
+}
+
+function clearActivityLog() {
+    const body = document.getElementById('activity-log-body');
+    body.innerHTML = '';
+    logCount = 0;
+    document.getElementById('log-count').textContent = '0';
+    addLogEntry('Log cleared', 'info');
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     showSection('dashboard');
     loadDashboard();
     loadNodePalette();
-    loadSettings();
     ws.connect();
     ws.on('connected', () => {
         document.getElementById('ws-status').className = 'status-dot connected';
-        Toast.success('Connected to server');
+        addLogEntry('Connected to server', 'success');
     });
     ws.on('disconnected', () => {
         document.getElementById('ws-status').className = 'status-dot disconnected';
+        addLogEntry('Disconnected from server', 'warn');
     });
     ws.on('jobs_update', (data) => {
         if (currentSection === 'dashboard') updateJobsTable(data);
         if (currentSection === 'monitor') updateMonitorRunning(data);
     });
-    ws.on('job_completed', (data) => { Toast.success(`Job ${data.job_id?.substr(0,8)} completed`); loadDashboard(); });
-    ws.on('job_failed', (data) => { Toast.error(`Job ${data.job_id?.substr(0,8)} failed`); loadDashboard(); });
+    ws.on('job_completed', (data) => {
+        addLogEntry('Job completed: ' + (data.job_id||'').substr(0,8), 'success');
+        Toast.success('Job completed');
+        loadDashboard();
+    });
+    ws.on('job_failed', (data) => {
+        addLogEntry('Job failed: ' + (data.job_id||'').substr(0,8), 'error');
+        Toast.error('Job failed');
+        loadDashboard();
+    });
+    ws.on('server_log', (data) => {
+        addLogEntry(data.message || JSON.stringify(data), data.level || 'info');
+    });
     setInterval(loadDashboard, 10000);
+    addLogEntry('Dashboard loaded', 'info');
 });
 
 function showSection(id) {

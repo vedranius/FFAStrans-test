@@ -92,7 +92,11 @@ class FileBrowser {
                 Toast.info(`Uploading ${file.name}...`);
                 const resp = await fetch('/api/files/upload', { method: 'POST', body: formData });
                 if (!resp.ok) throw new Error(resp.statusText);
+                const result = await resp.json();
                 Toast.success(`${file.name} uploaded`);
+                if (this.onSelect && this.mode === 'upload') {
+                    this.onSelect(result.path);
+                }
             } catch(e) { Toast.error(`Upload failed: ${e.message}`); }
         }
         this.load(this.currentPath);

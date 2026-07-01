@@ -169,6 +169,18 @@
         </div>
     </div>
 
+    <div id="activity-log" class="activity-log">
+        <div class="activity-log-header">
+            <span class="activity-log-title">Activity Log</span>
+            <span class="activity-log-count" id="log-count">0</span>
+            <button class="btn btn-xs" onclick="toggleActivityLog()" title="Toggle log">&#9660;</button>
+            <button class="btn btn-xs" onclick="clearActivityLog()" title="Clear log">&#10005;</button>
+        </div>
+        <div class="activity-log-body" id="activity-log-body">
+            <div class="activity-log-line activity-log-info">System ready</div>
+        </div>
+    </div>
+
     <script src="/static/js/toast.js"></script>
     <script src="/static/js/websocket.js"></script>
     <script src="/static/js/filebrowser.js"></script>
