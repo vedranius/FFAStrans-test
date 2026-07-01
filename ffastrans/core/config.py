@@ -3,7 +3,7 @@ import os
 import json
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 WORKFLOW_DIR = DATA_DIR / "workflows"
 JOB_DIR = DATA_DIR / "jobs"
