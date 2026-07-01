@@ -366,6 +366,94 @@ async def host_heartbeat(request: Request):
     return {"status": "ok"}
 
 
+@app.get("/api/files/browse")
+async def browse_files(path: str = "/"):
+    try:
+        p = Path(path).resolve()
+        if not p.exists():
+            raise HTTPException(404, "Path not found")
+        if p.is_file():
+            return {"path": str(p), "items": [{"name": p.name, "path": str(p), "is_dir": False, "size": p.stat().st_size}]}
+        items = []
+        for item in sorted(p.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+            try:
+                stat = item.stat()
+                items.append({
+                    "name": item.name,
+                    "path": str(item),
+                    "is_dir": item.is_dir(),
+                    "size": stat.st_size if item.is_file() else 0,
+                    "modified": stat.st_mtime,
+                })
+            except PermissionError:
+                items.append({"name": item.name, "path": str(item), "is_dir": item.is_dir(), "size": 0})
+        return {"path": str(p), "items": items}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/files/upload")
+async def upload_file(file: UploadFile = File(...), path: str = "/"):
+    try:
+        dest_dir = Path(path).resolve()
+        if not dest_dir.exists():
+            dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_file = dest_dir / file.filename
+        content = await file.read()
+        with open(dest_file, "wb") as f:
+            f.write(content)
+        return {"status": "ok", "path": str(dest_file), "size": len(content)}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/files/download")
+async def download_file(path: str):
+    try:
+        p = Path(path).resolve()
+        if not p.exists() or not p.is_file():
+            raise HTTPException(404, "File not found")
+        from fastapi.responses import FileResponse
+        return FileResponse(path=str(p), filename=p.name)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+class SettingsUpdate(BaseModel):
+    hostname: Optional[str] = None
+    port: Optional[str] = None
+    max_concurrent_jobs: Optional[str] = None
+    input_dir: Optional[str] = None
+    output_dir: Optional[str] = None
+    ffmpeg_path: Optional[str] = None
+    ffprobe_path: Optional[str] = None
+
+
+@app.post("/api/settings")
+async def save_settings(data: SettingsUpdate):
+    from ..core.config import save_config
+    cfg = {}
+    if data.hostname is not None: cfg["hostname"] = data.hostname
+    if data.port is not None: cfg["api_port"] = data.port
+    if data.max_concurrent_jobs is not None: cfg["max_concurrent_jobs"] = data.max_concurrent_jobs
+    if data.input_dir is not None: cfg["input_dir"] = data.input_dir
+    if data.output_dir is not None: cfg["output_dir"] = data.output_dir
+    if data.ffmpeg_path is not None: cfg["ffmpeg_path"] = data.ffmpeg_path
+    if data.ffprobe_path is not None: cfg["ffprobe_path"] = data.ffprobe_path
+    save_config(cfg)
+    return {"status": "ok"}
+
+
+@app.get("/api/settings")
+async def get_settings():
+    from ..core.config import load_config
+    return load_config()
+
+
 ws_clients: list[WebSocket] = []
 
 

@@ -13,23 +13,43 @@
             <nav>
                 <a href="#" class="nav-link active" onclick="showSection('dashboard')">Dashboard</a>
                 <a href="#" class="nav-link" onclick="showSection('workflows')">Workflows</a>
+                <a href="#" class="nav-link" onclick="showSection('monitor')">Monitor</a>
+                <a href="#" class="nav-link" onclick="showSection('nodes')">Nodes</a>
                 <a href="#" class="nav-link" onclick="showSection('settings')">Settings</a>
-                <a href="/monitor" class="nav-link">Monitor (Live)</a>
             </nav>
+            <div class="header-right">
+                <span class="status-dot disconnected" id="ws-status" title="WebSocket status"></span>
+                <a href="#" class="help-link" onclick="HelpSystem.showQuickStart();return false" title="Quick Start Guide">?</a>
+                <a href="#" class="help-link" onclick="HelpSystem.showVariableRef();return false" title="Variable Reference">fx</a>
+            </div>
         </div>
     </header>
 
     <main>
         <section id="dashboard" class="section">
+            <div class="quick-actions">
+                <div class="quick-action" onclick="showSubmitJobModal()"><span class="qa-icon">&#9654;</span>Submit Job</div>
+                <div class="quick-action" onclick="showSection('workflows');createNewWorkflow()"><span class="qa-icon">+</span>New Workflow</div>
+                <div class="quick-action" onclick="FileBrowser.open({mode:'select',onSelect:p=>showSubmitJobModal(p)})"><span class="qa-icon">&#128193;</span>Browse Files</div>
+                <div class="quick-action" onclick="showSection('workflows');importWorkflow()"><span class="qa-icon">&#8615;</span>Import</div>
+            </div>
             <div class="stats-grid">
-                <div class="stat-card"><h3>Active Jobs</h3><div class="stat-value" id="active-jobs-count">0</div></div>
-                <div class="stat-card"><h3>Workflows</h3><div class="stat-value" id="workflow-count">0</div></div>
-                <div class="stat-card"><h3>Completed</h3><div class="stat-value" id="completed-count">0</div></div>
-                <div class="stat-card"><h3>Failed</h3><div class="stat-value" id="failed-count">0</div></div>
+                <div class="stat-card running"><h3>Running</h3><div class="stat-value" id="stat-running">0</div></div>
+                <div class="stat-card total"><h3>Queued</h3><div class="stat-value" id="stat-queued">0</div></div>
+                <div class="stat-card completed"><h3>Completed</h3><div class="stat-value" id="stat-completed">0</div></div>
+                <div class="stat-card failed"><h3>Failed</h3><div class="stat-value" id="stat-failed">0</div></div>
+                <div class="stat-card total"><h3>Workflows</h3><div class="stat-value" id="stat-workflows">0</div></div>
+                <div class="stat-card"><h3>Workers</h3><div class="stat-value" id="stat-workers">0</div></div>
             </div>
             <div class="panels">
-                <div class="panel"><h2>Active Jobs</h2><table id="active-jobs-table"><thead><tr><th>Job ID</th><th>Workflow</th><th>Source</th><th>Status</th><th>Progress</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
-                <div class="panel"><h2>Recent History</h2><table id="history-table"><thead><tr><th>Time</th><th>Workflow</th><th>Source</th><th>Result</th><th>Duration</th></tr></thead><tbody></tbody></table></div>
+                <div class="panel">
+                    <h2><span class="panel-icon">&#9654;</span>Active Jobs</h2>
+                    <table id="active-jobs-table"><thead><tr><th>Job ID</th><th>Workflow</th><th>Source</th><th>Status</th><th>Progress</th><th>Actions</th></tr></thead><tbody></tbody></table>
+                </div>
+                <div class="panel">
+                    <h2><span class="panel-icon">&#128337;</span>Recent History</h2>
+                    <table id="history-table"><thead><tr><th>Time</th><th>Workflow</th><th>Source</th><th>Result</th><th>Duration</th><th></th></tr></thead><tbody></tbody></table>
+                </div>
             </div>
         </section>
 
@@ -37,38 +57,104 @@
             <div class="toolbar">
                 <button class="btn btn-primary" onclick="createNewWorkflow()">+ New Workflow</button>
                 <button class="btn" onclick="importWorkflow()">Import</button>
+                <input type="text" class="search-box" placeholder="Search workflows..." oninput="filterWorkflows(this.value)">
             </div>
             <div id="workflow-list"></div>
-
             <div id="wf-editor" style="display:none">
                 <div class="toolbar">
-                    <button class="btn" onclick="closeEditor()">Back</button>
+                    <button class="btn" onclick="closeEditor()">&#8592; Back</button>
                     <button class="btn btn-primary" onclick="saveWorkflow()">Save</button>
-                    <button class="btn btn-success" onclick="runWorkflow()">Run Job</button>
+                    <button class="btn btn-success" onclick="runWorkflow()">&#9654; Run Job</button>
+                    <button class="btn" onclick="runWorkflowUpload()">&#8686; Upload & Run</button>
                     <span id="editor-wf-name" style="color:#aaa;margin-left:10px"></span>
                 </div>
                 <div class="editor-workspace">
-                    <div class="node-palette" id="node-palette"></div>
+                    <div class="node-palette" id="node-palette">
+                        <input type="text" class="palette-search" placeholder="Search nodes..." oninput="filterNodePalette(this.value)">
+                        <div id="palette-content"></div>
+                    </div>
                     <div class="canvas-container" id="canvas-container">
                         <canvas id="wf-canvas"></canvas>
                     </div>
                     <div class="properties-panel" id="properties-panel">
                         <h3>Properties</h3>
-                        <p style="color:#aaa;font-size:.85em">Click a node to edit.</p>
+                        <p style="color:#aaa;font-size:.85em">Click a node to edit its properties.</p>
+                        <p style="color:#aaa;font-size:.75em;margin-top:8px">Drag nodes from the palette to the canvas. Connect by dragging from output (green) to input (red) ports.</p>
                     </div>
                 </div>
             </div>
         </section>
 
+        <section id="monitor" class="section" style="display:none">
+            <div class="toolbar">
+                <h2 style="margin:0;font-size:1.1em">Live Monitor</h2>
+                <span class="status-dot disconnected" id="monitor-ws-status"></span>
+                <span id="monitor-ws-label" style="font-size:.8em;color:var(--text-secondary)">Connecting...</span>
+            </div>
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="showMonitorTab('running')">Running Jobs</button>
+                <button class="tab-btn" onclick="showMonitorTab('history')">History</button>
+                <button class="tab-btn" onclick="showMonitorTab('logs')">Job Logs</button>
+            </div>
+            <div id="monitor-running" class="tab-content active">
+                <div class="panel">
+                    <table id="monitor-running-table"><thead><tr><th>Workflow</th><th>Source</th><th>Node</th><th>Status</th><th>Progress</th><th>Actions</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+            <div id="monitor-history" class="tab-content">
+                <div class="panel">
+                    <div class="toolbar"><input type="text" class="search-box" placeholder="Filter history..." oninput="filterHistory(this.value)"></div>
+                    <table id="monitor-history-table"><thead><tr><th>Time</th><th>Workflow</th><th>Source</th><th>Result</th><th>Duration</th><th></th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+            <div id="monitor-logs" class="tab-content">
+                <div class="panel">
+                    <div class="toolbar">
+                        <select id="log-job-select" onchange="loadJobLog(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg-tertiary);color:var(--text-primary);font-size:.85em"><option value="">Select a job...</option></select>
+                        <button class="btn btn-sm" onclick="refreshLogJobs()">Refresh</button>
+                    </div>
+                    <div class="job-log" id="job-log-content">Select a job to view its log.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="nodes" class="section" style="display:none">
+            <div class="toolbar">
+                <h2 style="margin:0;font-size:1.1em">Worker Nodes</h2>
+                <button class="btn btn-primary" onclick="showAddWorkerModal()">+ Add Worker</button>
+                <button class="btn" onclick="loadWorkers()">Refresh</button>
+            </div>
+            <div class="stats-grid" style="margin-bottom:20px">
+                <div class="stat-card"><h3>Total Workers</h3><div class="stat-value" id="worker-total">0</div></div>
+                <div class="stat-card running"><h3>Online</h3><div class="stat-value" id="worker-online">0</div></div>
+                <div class="stat-card failed"><h3>Offline</h3><div class="stat-value" id="worker-offline">0</div></div>
+                <div class="stat-card"><h3>Total Capacity</h3><div class="stat-value" id="worker-capacity">0</div></div>
+            </div>
+            <div class="workers-grid" id="workers-grid"></div>
+        </section>
+
         <section id="settings" class="section" style="display:none">
-            <div class="panel" style="max-width:600px">
-                <h2>System Settings</h2>
-                <div class="form-group"><label>Host Name</label><input type="text" id="set-hostname" readonly></div>
-                <div class="form-group"><label>API Port</label><input type="number" id="set-port" value="8080"></div>
-                <div class="form-group"><label>Max Concurrent Jobs</label><input type="number" id="set-max-jobs" value="4"></div>
-                <div class="form-group"><label>Input Directory</label><input type="text" id="set-input-dir" value="drop_folders/input"></div>
-                <div class="form-group"><label>Output Directory</label><input type="text" id="set-output-dir" value="drop_folders/output"></div>
-                <button class="btn btn-primary" onclick="alert('Settings saved!')">Save Settings</button>
+            <div class="panels">
+                <div class="panel" style="max-width:600px">
+                    <h2>System Settings</h2>
+                    <div class="form-group"><label>Host Name</label><input type="text" id="set-hostname" readonly><div class="help-text">Server hostname identifier</div></div>
+                    <div class="form-group"><label>API Port</label><input type="number" id="set-port" value="8080"></div>
+                    <div class="form-group"><label>Max Concurrent Jobs</label><input type="number" id="set-max-jobs" value="4"></div>
+                    <div class="form-group"><label>Input Directory</label><div style="display:flex;gap:6px"><input type="text" id="set-input-dir" value="drop_folders/input" style="flex:1"><button class="btn btn-sm" onclick="FileBrowser.open({mode:'select',onSelect:p=>document.getElementById('set-input-dir').value=p})">Browse</button></div></div>
+                    <div class="form-group"><label>Output Directory</label><div style="display:flex;gap:6px"><input type="text" id="set-output-dir" value="drop_folders/output" style="flex:1"><button class="btn btn-sm" onclick="FileBrowser.open({mode:'select',onSelect:p=>document.getElementById('set-output-dir').value=p})">Browse</button></div></div>
+                    <div class="form-group"><label>Fmpeg Path</label><input type="text" id="set-ffmpeg" value="ffmpeg"></div>
+                    <div class="form-group"><label>Ffprobe Path</label><input type="text" id="set-ffprobe" value="ffprobe"></div>
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                </div>
+                <div class="panel">
+                    <h2>Global Variables</h2>
+                    <div id="user-vars-list"></div>
+                    <button class="btn btn-sm" onclick="addUserVar()" style="margin-top:10px">+ Add Variable</button>
+                    <hr>
+                    <h2>Presets</h2>
+                    <div id="presets-list"></div>
+                    <button class="btn btn-sm" onclick="importPresetModal()" style="margin-top:10px">Import Preset</button>
+                </div>
             </div>
         </section>
     </main>
@@ -83,6 +169,10 @@
         </div>
     </div>
 
+    <script src="/static/js/toast.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/filebrowser.js"></script>
+    <script src="/static/js/help.js"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/workflow.js"></script>
     <script src="/static/js/app.js"></script>
