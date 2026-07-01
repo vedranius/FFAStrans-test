@@ -492,6 +492,18 @@ async def get_settings():
 ws_clients: list[WebSocket] = []
 
 
+@app.middleware("http")
+async def update_host_heartbeat(request: Request, call_next):
+    if request.url.path.startswith("/ws/") or request.url.path.startswith("/static"):
+        return await call_next(request)
+    response = await call_next(request)
+    try:
+        storage.update_host(HOSTNAME, last_seen=time.time(), active=True)
+    except Exception:
+        pass
+    return response
+
+
 async def broadcast_log(message: str, level: str = "info"):
     for ws in ws_clients[:]:
         try:

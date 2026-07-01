@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     setInterval(loadDashboard, 10000);
+    setInterval(() => fetch('/api/hosts/heartbeat').catch(() => {}), 15000);
     addLogEntry('Dashboard loaded', 'info');
 });
 
