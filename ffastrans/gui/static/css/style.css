@@ -23,7 +23,7 @@ tr:hover{background:var(--bg-tertiary)}
 .btn{padding:8px 16px;border:1px solid var(--border);border-radius:4px;background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;font-size:.9em;transition:all .2s}
 .btn:hover{background:var(--accent2)}.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn-success{background:var(--success);border-color:var(--success)}.btn-danger{background:var(--danger);border-color:var(--danger)}
-.btn-sm{padding:4px 10px;font-size:.8em}
+.btn-sm{padding:4px 10px;font-size:.8em}.btn-xs{padding:2px 6px;font-size:.7em}
 .toolbar{display:flex;gap:10px;margin-bottom:15px}
 .form-group{margin-bottom:15px}.form-group label{display:block;margin-bottom:5px;color:var(--text-secondary);font-size:.9em}
 .form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg-tertiary);color:var(--text-primary);font-size:.9em}
@@ -41,6 +41,8 @@ tr:hover{background:var(--bg-tertiary)}
 .workflow-card .wf-actions{display:flex;gap:6px}
 .state-badge{padding:3px 10px;border-radius:12px;font-size:.75em;font-weight:600;text-transform:uppercase}
 .state-stopped{background:#555}.state-running{background:var(--success)}.state-disabled{background:var(--warning);color:#000}
+.state-queued{background:#555}.state-completed{background:var(--success)}.state-failed{background:var(--danger)}
+.state-aborted{background:#ff5722}.state-paused{background:var(--warning);color:#000}.state-skipped{background:#555}
 .workflow-editor{display:flex;flex-direction:column;height:calc(100vh - 80px)}
 .editor-toolbar{display:flex;gap:10px;padding:10px;background:var(--bg-secondary);border-bottom:1px solid var(--border)}
 .editor-workspace{display:flex;flex:1;overflow:hidden}
@@ -51,10 +53,21 @@ tr:hover{background:var(--bg-tertiary)}
 .palette-item:hover{border-color:var(--accent);background:var(--accent2)}
 .canvas-container{flex:1;background:var(--bg-primary);position:relative;overflow:hidden}
 .canvas-container canvas{width:100%;height:100%}
-.properties-panel{width:280px;background:var(--bg-secondary);border-left:1px solid var(--border);overflow-y:auto;padding:10px}
+.properties-panel{width:320px;background:var(--bg-secondary);border-left:1px solid var(--border);overflow-y:auto;padding:10px}
 .properties-panel h3{font-size:.9em;color:var(--text-secondary);margin-bottom:10px}
+.properties-panel h4{font-size:.85em;color:var(--text-secondary);margin:10px 0 5px;border-top:1px solid var(--border);padding-top:8px}
 .prop-group{margin-bottom:10px}.prop-group label{display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:3px}
 .prop-group input,.prop-group select,.prop-group textarea{width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:3px;background:var(--bg-tertiary);color:var(--text-primary);font-size:.85em}
-.node-context-menu{position:absolute;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:5px 0;z-index:300;min-width:120px}
-.node-context-menu button{display:block;width:100%;padding:6px 12px;background:none;border:none;color:var(--text-primary);text-align:left;cursor:pointer;font-size:.85em}
-.node-context-menu button:hover{background:var(--accent2)}
+.prop-group input:focus,.prop-group select:focus{outline:none;border-color:var(--accent)}
+.prop-group input[type="checkbox"]{width:auto;margin-right:5px}
+.checkbox-group{display:flex;flex-wrap:wrap;gap:5px}
+.checkbox{display:flex;align-items:center;gap:3px;font-size:.8em;color:var(--text-secondary);cursor:pointer}
+.checkbox input[type="checkbox"]{width:auto}
+.var-row{display:flex;gap:5px;margin-bottom:5px;align-items:center}
+.var-row input{flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:3px;background:var(--bg-tertiary);color:var(--text-primary);font-size:.8em}
+.condition-editor,.populate-editor{margin-top:10px;border-top:1px solid var(--border);padding-top:8px}
+.condition-row,.populate-row{display:flex;gap:5px;margin-bottom:5px;align-items:center;font-size:.8em}
+.condition-row select,.condition-row input,.populate-row input,.populate-row select{padding:3px 5px;border:1px solid var(--border);border-radius:3px;background:var(--bg-tertiary);color:var(--text-primary);font-size:.8em}
+.condition-row select{width:50px}
+.populate-row span{color:var(--accent);font-weight:bold}
+hr{border:none;border-top:1px solid var(--border);margin:10px 0}

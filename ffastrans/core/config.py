@@ -1,5 +1,6 @@
 """Global configuration for FFAStrans Linux Mimo."""
 import os
+import platform
 import json
 from pathlib import Path
 
@@ -13,7 +14,7 @@ PRESETS_DIR = BASE_DIR / "ffastrans" / "presets"
 INPUT_DIR = Path(os.getenv("FFASTRANS_INPUT_DIR", str(BASE_DIR / "drop_folders" / "input")))
 OUTPUT_DIR = Path(os.getenv("FFASTRANS_OUTPUT_DIR", str(BASE_DIR / "drop_folders" / "output")))
 
-HOSTNAME = os.getenv("FFASTRANS_HOSTNAME", os.uname().nodename)
+HOSTNAME = os.getenv("FFASTRANS_HOSTNAME", platform.node())
 API_PORT = int(os.getenv("FFASTRANS_API_PORT", "8080"))
 API_HOST = os.getenv("FFASTRANS_API_HOST", "0.0.0.0")
 SECRET_KEY = os.getenv("FFASTRANS_SECRET_KEY", "change-me-in-production")
