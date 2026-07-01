@@ -200,6 +200,7 @@ tr:hover{background:var(--bg-hover)}
 .activity-log-success{color:var(--success)}
 .activity-log-warn{color:var(--warning)}
 .activity-log-error{color:var(--danger)}
+.activity-log-api{color:#9c27b0}
 
 main{padding-bottom:110px}
 

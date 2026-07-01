@@ -860,6 +860,6 @@ function doSubmitToNode(nodeId) {
     if (!file) return;
     const wfId = editor.workflowId;
     API.submitJob({wf_id: wfId, inputfile: file, start_proc: nodeId}).then(r => {
-        alert('Job submitted: ' + r.job_id);
-    }).catch(e => alert('Error: ' + e.message));
+        Toast.success('Job submitted: ' + r.job_id.substr(0,8));
+    }).catch(e => Toast.error('Error: ' + e.message));
 }

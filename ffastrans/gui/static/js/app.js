@@ -165,15 +165,21 @@ function updateHistoryTable(hist) {
     }
     tbody.innerHTML = hist.slice(0, 20).map(h => {
         const dur = h.finished_at && h.started_at ? Math.round(h.finished_at - h.started_at) + 's' : '-';
+        const outFile = h.output_file || '';
+        const dlBtn = outFile ? `<button class="btn btn-xs" onclick="downloadFile('${outFile.replace(/'/g, "\\'")}')" title="Download output">&#8686;</button>` : '';
         return `<tr>
             <td>${new Date(h.started_at*1000).toLocaleTimeString()}</td>
             <td>${h.wf_name||h.wf_id}</td>
             <td title="${h.input_file||''}">${(h.input_file||'').split('/').pop()||'-'}</td>
             <td><span class="state-badge state-${h.state}">${h.state}</span></td>
             <td>${dur}</td>
-            <td><button class="btn btn-xs" onclick="viewJobLog('${h.id}')">Log</button></td>
+            <td><button class="btn btn-xs" onclick="viewJobLog('${h.id}')">Log</button> ${dlBtn}</td>
         </tr>`;
     }).join('');
+}
+
+function downloadFile(path) {
+    window.open('/api/files/download?path=' + encodeURIComponent(path), '_blank');
 }
 
 function updateMonitorRunning(jobs) {
@@ -213,7 +219,9 @@ function viewJobLog(jobId) {
 function showMonitorTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        if (b.textContent.toLowerCase().includes(tab === 'running' ? 'running' : tab)) b.classList.add('active');
+    });
     document.getElementById('monitor-' + tab).classList.add('active');
     if (tab === 'history') loadMonitorHistory();
     if (tab === 'logs') refreshLogJobs();
@@ -325,12 +333,28 @@ function renderWorkflowList(wfs) {
                 <p>ID: ${wf.id} | Nodes: ${(wf.nodes||[]).length} | State: <span class="state-badge state-${wf.state}">${wf.state}</span></p>
             </div>
             <div class="wf-actions">
+                <button class="btn btn-sm" onclick="event.stopPropagation();exportWorkflow('${wf.id}')">&#8686; Export</button>
                 <button class="btn btn-sm" onclick="event.stopPropagation();toggleWorkflow('${wf.id}','${wf.state}')">${wf.state==='stopped'||wf.state==='disabled'?'Start':'Stop'}</button>
                 <button class="btn btn-sm btn-success" onclick="event.stopPropagation();submitToWorkflow('${wf.id}')">Run</button>
                 <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteWorkflow('${wf.id}')">Delete</button>
             </div>
         </div>
     `).join('');
+}
+
+async function exportWorkflow(id) {
+    try {
+        const wf = await API.getWorkflow(id);
+        const json = JSON.stringify(wf, null, 2);
+        const blob = new Blob([json], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (wf.name || 'workflow').replace(/[^a-z0-9]/gi, '_') + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        Toast.success('Workflow exported');
+    } catch(e) { Toast.error('Export failed: ' + e.message); }
 }
 
 function filterWorkflows(query) {
@@ -514,7 +538,15 @@ async function toggleWorkflow(id, state) {
 }
 
 async function deleteWorkflow(id) {
-    if (!confirm('Delete this workflow?')) return;
+    showModal('Delete Workflow', `
+        <p style="color:var(--text-secondary);margin-bottom:12px">Are you sure you want to delete this workflow?</p>
+        <button class="btn btn-danger" onclick="doDeleteWorkflow('${id}')">Delete</button>
+        <button class="btn" onclick="closeModal()">Cancel</button>
+    `);
+}
+
+async function doDeleteWorkflow(id) {
+    closeModal();
     try { await API.deleteWorkflow(id); Toast.success('Workflow deleted'); loadWorkflowList(); } catch(e) { Toast.error('Error: ' + e.message); }
 }
 
@@ -589,6 +621,14 @@ async function doAddWorker() {
 function loadAllSettings() {
     fetch('/api/about').then(r => r.json()).then(d => {
         document.getElementById('set-hostname').value = d.hostname || '';
+    }).catch(() => {});
+    API.get('/settings').then(cfg => {
+        if (cfg.port) document.getElementById('set-port').value = cfg.port;
+        if (cfg.max_concurrent_jobs) document.getElementById('set-max-jobs').value = cfg.max_concurrent_jobs;
+        if (cfg.input_dir) document.getElementById('set-input-dir').value = cfg.input_dir;
+        if (cfg.output_dir) document.getElementById('set-output-dir').value = cfg.output_dir;
+        if (cfg.ffmpeg_path) document.getElementById('set-ffmpeg').value = cfg.ffmpeg_path;
+        if (cfg.ffprobe_path) document.getElementById('set-ffprobe').value = cfg.ffprobe_path;
     }).catch(() => {});
     API.getUserVars().then(vars => {
         const el = document.getElementById('user-vars-list');
@@ -671,4 +711,10 @@ function closeModal() {
     document.getElementById('modal').style.display = 'none';
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (editor && editor.workflowId) saveWorkflow();
+    }
+});
