@@ -393,8 +393,8 @@ async def host_heartbeat(request: Request):
 
 @app.get("/api/files/browse")
 async def browse_files(path: str = ""):
-    if not path:
-        from ..core.config import INPUT_DIR
+    from ..core.config import INPUT_DIR
+    if not path or path == "/":
         path = str(INPUT_DIR)
     try:
         p = Path(path).resolve()
@@ -423,8 +423,11 @@ async def browse_files(path: str = ""):
 
 
 @app.post("/api/files/upload")
-async def upload_file(file: UploadFile = File(...), path: str = Form("/")):
+async def upload_file(file: UploadFile = File(...), path: str = Form("")):
+    from ..core.config import INPUT_DIR
     try:
+        if not path or path == "/":
+            path = str(INPUT_DIR)
         dest_dir = Path(path).resolve()
         if not dest_dir.exists():
             dest_dir.mkdir(parents=True, exist_ok=True)
