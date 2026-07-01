@@ -33,6 +33,25 @@ gui_path = BASE_DIR / "ffastrans" / "gui"
 app.mount("/static", StaticFiles(directory=str(gui_path / "static")), name="static")
 
 
+@app.on_event("startup")
+async def register_master_as_worker():
+    max_jobs_per_class = {}
+    for i in range(6):
+        max_jobs_per_class[str(i)] = MAX_CONCURRENT_JOBS
+    host = HostInfo(
+        name=HOSTNAME,
+        hostname=HOSTNAME,
+        ip="127.0.0.1",
+        port=API_PORT,
+        groups=["default", "master"],
+        max_jobs_per_class=max_jobs_per_class,
+        active=True,
+        last_seen=time.time(),
+    )
+    storage.register_host(host)
+    logger.info(f"Master node registered as worker: {HOSTNAME}")
+
+
 class WorkflowCreate(BaseModel):
     name: str = "New Workflow"
     nodes: list = []
@@ -344,13 +363,17 @@ async def list_hosts():
 @app.post("/api/hosts/register")
 async def register_host(request: Request):
     data = await request.json()
+    max_jobs_per_class = {}
+    max_jobs = data.get("max_jobs", 4)
+    for i in range(6):
+        max_jobs_per_class[str(i)] = max_jobs
     host = HostInfo(
         name=data.get("name", ""),
         hostname=data.get("hostname", HOSTNAME),
         ip=data.get("ip", "127.0.0.1"),
         port=data.get("port", API_PORT),
-        groups=data.get("groups", []),
-        max_jobs=data.get("max_jobs", 4),
+        groups=data.get("groups", ["default"]),
+        max_jobs_per_class=max_jobs_per_class,
         active=True,
         last_seen=time.time(),
     )
@@ -406,6 +429,7 @@ async def upload_file(file: UploadFile = File(...), path: str = "/"):
             f.write(content)
         return {"status": "ok", "path": str(dest_file), "size": len(content)}
     except Exception as e:
+        logger.error(f"Upload error: {e}")
         raise HTTPException(500, str(e))
 
 

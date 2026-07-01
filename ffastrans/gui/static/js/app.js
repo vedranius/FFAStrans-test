@@ -5,7 +5,6 @@ let allWorkflows = [];
 document.addEventListener('DOMContentLoaded', () => {
     showSection('dashboard');
     loadDashboard();
-    initWorkflowEditor();
     loadNodePalette();
     loadSettings();
     ws.connect();
