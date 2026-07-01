@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from ..core.storage import Storage
-from ..core.config import BASE_DIR, API_PORT, HOSTNAME
+from ..core.config import BASE_DIR, API_PORT, HOSTNAME, MAX_CONCURRENT_JOBS
 from ..core.models import (
     Workflow, Job, Node, Variable, Connection, HostInfo,
     WorkflowState, JobState, NodeState
