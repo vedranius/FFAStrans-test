@@ -171,14 +171,18 @@ async function openWorkflow(id) {
 
         if (!editor) editor = new WorkflowEditor('wf-canvas');
         editor.loadWorkflow(wf);
+        loadNodePalette();
 
         setTimeout(() => {
             const container = document.getElementById('canvas-container');
             const canvas = document.getElementById('wf-canvas');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight || 600;
-            editor.draw();
-        }, 50);
+            if (container && canvas) {
+                canvas.width = container.clientWidth || 800;
+                canvas.height = container.clientHeight || 600;
+                editor.resize();
+                editor.draw();
+            }
+        }, 100);
     } catch(e) { alert('Error: ' + e.message); }
 }
 
