@@ -20,13 +20,18 @@ class WorkflowEditor {
         this.canvas.addEventListener('mouseup', e => this.onMouseUp(e));
         this.canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
         this.canvas.addEventListener('dblclick', e => this.onDblClick(e));
+        window.addEventListener('resize', () => this.resize());
+        const ro = new ResizeObserver(() => this.resize());
+        ro.observe(this.canvas.parentElement);
     }
 
     resize() {
         const container = this.canvas.parentElement;
-        this.canvas.width = container.clientWidth;
-        this.canvas.height = container.clientHeight;
-        this.draw();
+        if (container && container.clientWidth > 0) {
+            this.canvas.width = container.clientWidth;
+            this.canvas.height = Math.max(container.clientHeight, 500);
+            this.draw();
+        }
     }
 
     loadWorkflow(wf) {
