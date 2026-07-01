@@ -3,10 +3,10 @@ import os
 import time
 import logging
 from typing import Optional
-from .core.models import Workflow, Job, Node, NodeState, JobState, WorkflowState, SplitInfo, Variable
-from .core.storage import Storage
-from .core.variables import VariableEngine
-from .nodes.registry import create_node_instance, get_node_class
+from .models import Workflow, Job, Node, NodeState, JobState, WorkflowState, SplitInfo, Variable
+from .storage import Storage
+from .variables import VariableEngine
+from ..nodes.registry import create_node_instance, get_node_class
 
 logger = logging.getLogger("ffastrans.engine")
 
