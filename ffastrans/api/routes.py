@@ -2,9 +2,10 @@
 import os
 import json
 import time
+import asyncio
 import logging
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -363,3 +364,36 @@ async def host_heartbeat(request: Request):
     data = {"hostname": hostname, "active": True, "last_seen": time.time()}
     storage.update_host(hostname, **data)
     return {"status": "ok"}
+
+
+ws_clients: list[WebSocket] = []
+
+
+@app.websocket("/ws/events")
+async def websocket_events(websocket: WebSocket):
+    await websocket.accept()
+    ws_clients.append(websocket)
+    logger.info(f"WebSocket client connected ({len(ws_clients)} total)")
+    try:
+        while True:
+            try:
+                msg = await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
+                if msg == "ping":
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+            except asyncio.TimeoutError:
+                pass
+            active_jobs = storage.get_running_jobs()
+            if active_jobs:
+                await websocket.send_text(json.dumps({
+                    "type": "jobs_update",
+                    "data": active_jobs,
+                }))
+            await asyncio.sleep(2)
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        if websocket in ws_clients:
+            ws_clients.remove(websocket)
+        logger.info(f"WebSocket client disconnected ({len(ws_clients)} total)")

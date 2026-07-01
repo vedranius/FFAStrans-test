@@ -28,7 +28,7 @@ class MediaDecoder(BaseNode):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
 
         if not input_file or not Path(input_file).exists():
             self.log(f'Input file not found: {input_file}')
@@ -122,7 +122,7 @@ class StillsDecoder(BaseNode):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self.resolve(params.get('output', ''))
 
         if not output_file:

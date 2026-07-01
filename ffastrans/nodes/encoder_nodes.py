@@ -13,6 +13,7 @@ Matches original FFAStrans encoder parameters:
 import os
 import json
 import logging
+from pathlib import Path
 from .base import BaseNode
 from ..core.config import FFMPEG_PATH, FFPROBE_PATH
 from ..core.models import NodeState
@@ -170,7 +171,7 @@ class H264MP4Encoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '.mp4')
 
         if not input_file or not os.path.exists(input_file):
@@ -217,7 +218,7 @@ class H265Encoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '.mp4')
 
         if not input_file or not os.path.exists(input_file):
@@ -272,7 +273,7 @@ class ProResEncoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '.mov')
 
         if not input_file or not os.path.exists(input_file):
@@ -328,7 +329,7 @@ class DNxHREncoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '.mxf')
 
         if not input_file or not os.path.exists(input_file):
@@ -375,7 +376,7 @@ class DNxHDEncoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '.mxf')
 
         if not input_file or not os.path.exists(input_file):
@@ -421,7 +422,7 @@ class CustomFFmpegEncoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         custom_args = self.resolve(params.get('ffmpeg_args', ''))
         output_file = self._get_output_path(params, input_file, '_out.mp4')
 
@@ -453,7 +454,7 @@ class AudioEncoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '_audio.wav')
 
         if not input_file or not os.path.exists(input_file):
@@ -488,7 +489,7 @@ class XDCAMEncoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '.mxf')
 
         if not input_file or not os.path.exists(input_file):
@@ -532,7 +533,7 @@ class AV1Encoder(BaseEncoder):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self._get_output_path(params, input_file, '.mkv')
 
         if not input_file or not os.path.exists(input_file):

@@ -23,6 +23,17 @@ class BaseNode(ABC):
     def resolve(self, text) -> str:
         return self.var_engine.resolve(str(text))
 
+    def get_input_file(self, params: dict = None) -> str:
+        if params is None:
+            params = self.node.params
+        explicit = params.get('input', '')
+        if explicit:
+            return self.resolve(explicit)
+        s_output = self.job.variables.get('s_output_file', '')
+        if s_output:
+            return self.resolve(s_output)
+        return self.resolve(self.job.input_file)
+
     def log(self, message: str):
         line = f'[{self.node.name}] {message}'
         self.logger.info(message)

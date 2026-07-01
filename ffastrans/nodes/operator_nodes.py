@@ -189,7 +189,7 @@ class AnalyzeNode(BaseNode):
     node_type = 'op_analyzer'
 
     def execute(self) -> bool:
-        input_file = self.resolve(self.node.params.get('input', self.job.input_file))
+        input_file = self.resolve(self.node.params.get('input', '') or self.job.input_file)
         if not input_file or not Path(input_file).exists():
             self.log(f'File not found: {input_file}')
             return False
@@ -432,7 +432,7 @@ class FolderDestination(BaseNode):
 
     def execute(self) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_dir = self.resolve(params.get('path', ''))
         prefix = self.resolve(params.get('prefix', ''))
         suffix = self.resolve(params.get('suffix', ''))
@@ -449,7 +449,8 @@ class FolderDestination(BaseNode):
             return False
 
         if not output_dir:
-            output_dir = str(Path(input_file).parent)
+            self.log('No destination path specified')
+            return False
 
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 

@@ -24,7 +24,7 @@ logger = logging.getLogger('ffastrans.nodes.filter')
 class BaseFilter(BaseNode):
     def _apply_filter(self, vf_filter: str, extra_inputs: list = None) -> bool:
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self.resolve(params.get('output', ''))
 
         if not output_file:
@@ -201,7 +201,7 @@ class ReverseFilter(BaseFilter):
     def execute(self) -> bool:
         vf = 'reverse'
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self.resolve(params.get('output', ''))
         if not output_file:
             from pathlib import Path
@@ -237,7 +237,7 @@ class FadeFilter(BaseFilter):
             af = f'afade=t=out:st={start}:d={duration}'
 
         params = self.node.params
-        input_file = self.resolve(params.get('input', self.job.input_file))
+        input_file = self.get_input_file()
         output_file = self.resolve(params.get('output', ''))
         if not output_file:
             from pathlib import Path
