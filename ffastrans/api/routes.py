@@ -392,7 +392,10 @@ async def host_heartbeat(request: Request):
 
 
 @app.get("/api/files/browse")
-async def browse_files(path: str = "/"):
+async def browse_files(path: str = ""):
+    if not path:
+        from ..core.config import INPUT_DIR
+        path = str(INPUT_DIR)
     try:
         p = Path(path).resolve()
         if not p.exists():

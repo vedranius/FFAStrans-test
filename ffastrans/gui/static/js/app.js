@@ -63,6 +63,26 @@ document.addEventListener('DOMContentLoaded', () => {
     ws.on('server_log', (data) => {
         addLogEntry(data.message || JSON.stringify(data), data.level || 'info');
     });
+
+    const origFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+        const method = args[1]?.method || 'GET';
+        if (url.startsWith('/api/')) {
+            const short = url.replace('/api/', '');
+            addLogEntry(`${method} /${short}`, 'api');
+        }
+        return origFetch.apply(this, args).then(resp => {
+            if (url.startsWith('/api/') && !resp.ok) {
+                addLogEntry(`ERROR ${resp.status} ${url}`, 'error');
+            }
+            return resp;
+        }).catch(e => {
+            if (url.startsWith('/api/')) addLogEntry(`FAILED ${url}: ${e.message}`, 'error');
+            throw e;
+        });
+    };
+
     setInterval(loadDashboard, 10000);
     addLogEntry('Dashboard loaded', 'info');
 });
@@ -87,6 +107,14 @@ function showSection(id) {
     if (id === 'monitor') loadMonitor();
     if (id === 'nodes') loadWorkers();
     if (id === 'settings') loadAllSettings();
+}
+
+async function loadMonitor() {
+    try {
+        const jobs = await API.getActiveJobs().catch(() => []);
+        updateMonitorRunning(jobs);
+        refreshLogJobs();
+    } catch(e) {}
 }
 
 async function loadDashboard() {

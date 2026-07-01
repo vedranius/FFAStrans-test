@@ -1,6 +1,6 @@
 class FileBrowser {
     constructor(options = {}) {
-        this.currentPath = options.path || '/mnt/c/Users/vpapes/Downloads/FFastrans-refactor_linux_mimo/drop_folders/input';
+        this.currentPath = options.path || '';
         this.selected = null;
         this.onSelect = options.onSelect || (() => {});
         this.onNavigate = options.onNavigate || (() => {});
@@ -9,14 +9,16 @@ class FileBrowser {
     }
     render(container) {
         this.el = container;
-        this.load(this.currentPath);
+        this.load(this.currentPath || '');
     }
     async load(path) {
         this.currentPath = path;
         try {
-            const resp = await fetch(`/api/files/browse?path=${encodeURIComponent(path)}`);
+            const url = path ? `/api/files/browse?path=${encodeURIComponent(path)}` : '/api/files/browse';
+            const resp = await fetch(url);
             if (!resp.ok) throw new Error(resp.statusText);
             const data = await resp.json();
+            this.currentPath = data.path || path;
             this.renderDir(data);
         } catch(e) { Toast.error('Cannot browse: ' + e.message); }
     }
