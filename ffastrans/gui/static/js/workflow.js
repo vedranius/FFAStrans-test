@@ -84,6 +84,7 @@ class WorkflowEditor {
         const node = {id, name: name || type, node_type: type, x, y, params:{}, state:'idle', preset_id:null, on_success:null, on_failure:null};
         this.nodes.push(node);
         this.selectNode(node);
+        this.updateStatusBar();
         return node;
     }
 
@@ -94,6 +95,7 @@ class WorkflowEditor {
         if (this.selectedNode && this.selectedNode.id === id) {
             this.selectedNode = null;
         }
+        this.updateStatusBar();
         this.draw();
         this.showProperties(null);
     }
@@ -283,6 +285,7 @@ class WorkflowEditor {
                         to_node: target.node.id,
                         to_port: 'input',
                     });
+                    this.updateStatusBar();
                 }
             }
             this.connecting = null;
@@ -635,27 +638,19 @@ class WorkflowEditor {
     }
 
     showProperties(node) {
-        const panel = document.getElementById('properties-panel');
+        const bar = document.getElementById('properties-bar');
+        const body = document.getElementById('properties-bar-body');
+        const title = document.getElementById('prop-bar-title');
         if (!node) {
-            panel.innerHTML = `<h3>Workflow Properties</h3>
-                <div class="prop-group"><label>Name</label><input id="wf-name" value="${this.workflowName}" onchange="editor.setWfProp('name',this.value)"></div>
-                <div class="prop-group"><label>Description</label><textarea id="wf-desc" rows="2" onchange="editor.setWfProp('description',this.value)">${this.workflowProps.description||''}</textarea></div>
-                <div class="prop-group"><label>Work Folder</label><input id="wf-workfolder" value="${this.workflowProps.work_folder||''}" onchange="editor.setWfProp('work_folder',this.value)"></div>
-                <div class="prop-group"><label>Sleep Timer (s)</label><input type="number" id="wf-sleep" value="${this.workflowProps.sleep_timer||10}" onchange="editor.setWfProp('sleep_timer',this.value)"></div>
-                <div class="prop-group"><label>Cron Schedule</label><input id="wf-cron" value="${this.workflowProps.cron||''}" placeholder="e.g. */5 * * * *" onchange="editor.setWfProp('cron',this.value)"></div>
-                <div class="prop-group"><label>Priority (0-5)</label><input type="number" id="wf-priority" min="0" max="5" value="${this.workflowProps.priority||2}" onchange="editor.setWfProp('priority',this.value)"></div>
-                <div class="prop-group"><label>Timeout Level (s)</label><input type="number" id="wf-timeout" value="${this.workflowProps.timeout_level||3}" onchange="editor.setWfProp('timeout_level',this.value)"></div>
-                <div class="prop-group"><label>Active Days</label><div id="wf-days" class="checkbox-group">${['mon','tue','wed','thu','fri','sat','sun'].map(d=>`<label class="checkbox"><input type="checkbox" value="${d}" ${(this.workflowProps.active_on||[]).includes(d)?'checked':''} onchange="editor.toggleActiveDay('${d}')">${d}</label>`).join('')}</div></div>
-                <hr>
-                <h4>Workflow Variables</h4>
-                <div id="wf-vars-list">${this.variables.map((v,i)=>`<div class="var-row"><input value="${v.name||''}" placeholder="name" onchange="editor.updateVar(${i},'name',this.value)"><input value="${v.value||''}" placeholder="value" onchange="editor.updateVar(${i},'value',this.value)"><button class="btn btn-danger btn-xs" onclick="editor.removeVar(${i})">X</button></div>`).join('')}</div>
-                <button class="btn btn-sm" onclick="editor.addVar()">+ Add Variable</button>`;
+            bar.style.display = 'none';
+            this.updateStatusBar();
             return;
         }
+        bar.style.display = 'block';
+        title.textContent = node.name || node.node_type;
 
         const paramFields = this.getParamFields(node.node_type);
-        let html = `<h3>${node.name || node.node_type}</h3>
-            <div class="prop-group"><label>Name</label><input id="prop-name" value="${node.name||''}" onchange="editor.updateNodeProp('name',this.value)"></div>`;
+        let html = `<div class="prop-group"><label>Name</label><input id="prop-name" value="${node.name||''}" onchange="editor.updateNodeProp('name',this.value)" style="width:120px"></div>`;
 
         paramFields.forEach(f => {
             const val = node.params[f.key] !== undefined ? node.params[f.key] : (f.default || '');
@@ -663,22 +658,34 @@ class WorkflowEditor {
                 const opts = f.options.map(o => `<option value="${o}" ${String(val)===String(o)?'selected':''}>${o}</option>`).join('');
                 html += `<div class="prop-group"><label>${f.label}</label><select id="prop-${f.key}" onchange="editor.updateNodeParam('${f.key}',this.value)">${opts}</select></div>`;
             } else if (f.type === 'textarea') {
-                html += `<div class="prop-group"><label>${f.label}</label><textarea id="prop-${f.key}" rows="3" onchange="editor.updateNodeParam('${f.key}',this.value)">${val}</textarea></div>`;
+                html += `<div class="prop-group"><label>${f.label}</label><textarea id="prop-${f.key}" rows="2" onchange="editor.updateNodeParam('${f.key}',this.value)" style="width:150px">${val}</textarea></div>`;
             } else if (f.type === 'checkbox') {
-                html += `<div class="prop-group"><label>${f.label}</label><input type="checkbox" id="prop-${f.key}" ${val?'checked':''} onchange="editor.updateNodeParam('${f.key}',this.checked)"></div>`;
+                html += `<div class="prop-group"><label><input type="checkbox" id="prop-${f.key}" ${val?'checked':''} onchange="editor.updateNodeParam('${f.key}',this.checked)"> ${f.label}</label></div>`;
             } else {
-                html += `<div class="prop-group"><label>${f.label}</label><input id="prop-${f.key}" value="${val}" onchange="editor.updateNodeParam('${f.key}',this.value)"></div>`;
+                html += `<div class="prop-group"><label>${f.label}</label><input id="prop-${f.key}" value="${val}" onchange="editor.updateNodeParam('${f.key}',this.value)" style="width:100px"></div>`;
             }
         });
 
         if (node.node_type === 'op_cond') html += this._buildConditionEditor(node);
         else if (node.node_type === 'op_populate') html += this._buildPopulateEditor(node);
 
-        html += `<div style="margin-top:15px">
-            <button class="btn btn-danger btn-sm" onclick="editor.removeNode('${node.id}')">Delete Node</button>
-            <button class="btn btn-sm" onclick="editor.copySelected()" style="margin-left:5px">Copy</button>
-        </div>`;
-        panel.innerHTML = html;
+        html += `<div class="prop-group"><label></label><button class="btn btn-danger btn-xs" onclick="editor.removeNode('${node.id}')">Delete</button> <button class="btn btn-xs" onclick="editor.copySelected()">Copy</button></div>`;
+        body.innerHTML = html;
+        this.updateStatusBar();
+    }
+
+    updateStatusBar() {
+        const nodesEl = document.getElementById('status-nodes');
+        const connsEl = document.getElementById('status-connections');
+        if (nodesEl) nodesEl.textContent = 'Nodes: ' + this.nodes.length;
+        if (connsEl) connsEl.textContent = 'Connections: ' + this.connections.length;
+    }
+
+    hidePropertiesBar() {
+        document.getElementById('properties-bar').style.display = 'none';
+        this.selectedNode = null;
+        this.selectedNodes.clear();
+        this.draw();
     }
 
     _buildConditionEditor(node) {

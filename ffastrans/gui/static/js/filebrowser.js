@@ -1,6 +1,6 @@
 class FileBrowser {
     constructor(options = {}) {
-        this.currentPath = options.path || '/';
+        this.currentPath = options.path || '/mnt/c/Users/vpapes/Downloads/FFastrans-refactor_linux_mimo/drop_folders/input';
         this.selected = null;
         this.onSelect = options.onSelect || (() => {});
         this.onNavigate = options.onNavigate || (() => {});

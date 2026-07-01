@@ -382,6 +382,10 @@ function closeEditor() {
     loadWorkflowList();
 }
 
+function hidePropertiesBar() {
+    if (editor) editor.hidePropertiesBar();
+}
+
 async function saveWorkflow() {
     if (!editor || !editor.workflowId) return;
     try {
