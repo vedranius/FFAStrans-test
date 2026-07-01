@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFAStrans - Monitor</title>
+    <meta http-equiv="refresh" content="3">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+        th, td { padding:6px 8px; text-align:left; border:1px solid #333; }
+        th { background:#334; color:#fff; font-size:14px; }
+        tr:nth-child(even) { background:#1a1a2e; }
+        tr:nth-child(odd) { background:#16213e; }
+        .progress-bar { width:100%; height:20px; background:#222; border-radius:3px; overflow:hidden; }
+        .progress-fill { height:100%; background:linear-gradient(90deg,#0f3460,#e94560); transition:width 0.3s; }
+        .progress-label { color:#fff; font-size:12px; line-height:20px; text-align:center; position:relative; }
+        .state-completed { color:#4caf50; }
+        .state-failed { color:#f44336; }
+        .state-running { color:#2196f3; }
+        .state-queued { color:#ff9800; }
+        .state-aborted { color:#9e9e9e; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>FFAStrans <span class="version">Linux Mimo v2.0</span></h1>
+            <nav>
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/monitor" class="nav-link active">Monitor</a>
+                <a href="/#workflows" class="nav-link">Workflows</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="section">
+            <h2>Running Jobs</h2>
+            <table id="running-jobs">
+                <thead>
+                    <tr>
+                        <th>Workflow</th>
+                        <th>Job Start</th>
+                        <th>Source</th>
+                        <th>Processor @ Host</th>
+                        <th>Status</th>
+                        <th>Total Progress</th>
+                    </tr>
+                </thead>
+                <tbody id="running-jobs-body"></tbody>
+            </table>
+
+            <h2>History</h2>
+            <table id="history-log">
+                <thead>
+                    <tr>
+                        <th>Workflow</th>
+                        <th>Job Start</th>
+                        <th>Job End</th>
+                        <th>Source</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="history-log-body"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        async function loadMonitor() {
+            try {
+                const jobsResp = await fetch('/api/jobs');
+                const jobs = await jobsResp.json();
+                const running = jobs.filter(j => ['queued','running','paused'].includes(j.state));
+                const tbody = document.getElementById('running-jobs-body');
+                tbody.innerHTML = running.map(j => `
+                    <tr>
+                        <td>${j.wf_id}</td>
+                        <td>${new Date(j.started_at*1000).toLocaleTimeString()}</td>
+                        <td>${j.input_file}</td>
+                        <td>${j.splits.map(s => s.current_node).join(', ')}</td>
+                        <td class="state-${j.state}">${j.state}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width:${j.total_progress}%"></div>
+                                <span class="progress-label">${Math.round(j.total_progress)}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                const histResp = await fetch('/api/history?start=0&count=100');
+                const hist = await histResp.json();
+                const htbody = document.getElementById('history-log-body');
+                htbody.innerHTML = hist.map(h => `
+                    <tr>
+                        <td>${h.wf_name || h.wf_id}</td>
+                        <td>${new Date(h.started_at*1000).toLocaleString()}</td>
+                        <td>${new Date(h.finished_at*1000).toLocaleString()}</td>
+                        <td>${h.input_file}</td>
+                        <td class="state-${h.state}">${h.state}</td>
+                    </tr>
+                `).join('');
+            } catch(e) {
+                console.error('Monitor load error:', e);
+            }
+        }
+        loadMonitor();
+    </script>
+</body>
+</html>

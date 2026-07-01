@@ -1,0 +1,29 @@
+const API = {
+    async get(url) { const r = await fetch('/api' + url); if (!r.ok) throw new Error(r.statusText); return r.json(); },
+    async post(url, data) { const r = await fetch('/api' + url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}); if (!r.ok) throw new Error(r.statusText); return r.json(); },
+    async put(url, data) { const r = await fetch('/api' + url, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}); if (!r.ok) throw new Error(r.statusText); return r.json(); },
+    async del(url) { const r = await fetch('/api' + url, {method:'DELETE'}); if (!r.ok) throw new Error(r.statusText); return r.json(); },
+
+    getWorkflows: () => API.get('/workflows'),
+    getWorkflow: (id) => API.get('/workflows/' + id),
+    createWorkflow: (data) => API.post('/workflows', data),
+    updateWorkflow: (id, data) => API.put('/workflows/' + id, data),
+    deleteWorkflow: (id) => API.del('/workflows/' + id),
+    setWorkflowState: (id, action) => API.put('/workflows/' + id + '/state', {action}),
+    getWorkflowVars: (id) => API.get('/workflows/' + id + '/user_variables'),
+
+    getJobs: () => API.get('/jobs'),
+    getActiveJobs: () => API.get('/jobs/active'),
+    getJob: (id) => API.get('/jobs/' + id),
+    submitJob: (data) => API.post('/jobs', data),
+    jobAction: (id, action, splitId) => API.put('/jobs/' + id, {action, split_id: splitId || ''}),
+    getJobLog: (id) => API.get('/joblog/' + id),
+    getJobVars: (id) => API.get('/jobvars/' + id),
+    getHistory: (start, count) => API.get('/history?start=' + (start||0) + '&count=' + (count||250)),
+
+    getUserVars: () => API.get('/user_variables'),
+    createUserVar: (data) => API.post('/user_variables', data),
+    getPresets: () => API.get('/presets'),
+    getNodes: () => API.get('/nodes/available'),
+    getHosts: () => API.get('/hosts'),
+};

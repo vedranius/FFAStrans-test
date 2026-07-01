@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ffastrans-master
+  namespace: ffastrans
+  labels:
+    app: ffastrans
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ffastrans
+      role: master
+  template:
+    metadata:
+      labels:
+        app: ffastrans
+        role: master
+    spec:
+      containers:
+        - name: ffastrans-master
+          image: ffastrans-linux-mimo:latest
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: FFASTRANS_NODE_ROLE
+              value: master
+            - name: FFASTRANS_API_PORT
+              value: "8080"
+            - name: FFASTRANS_MAX_CONCURRENT_JOBS
+              value: "4"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: drop-folders
+              mountPath: /app/drop_folders
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /api/about
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/about
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ffastrans-data-pvc
+        - name: drop-folders
+          persistentVolumeClaim:
+            claimName: ffastrans-drop-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ffastrans-master
+  namespace: ffastrans
+  labels:
+    app: ffastrans
+    role: master
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  selector:
+    app: ffastrans
+    role: master
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ffastrans-data-pvc
+  namespace: ffastrans
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ffastrans-drop-pvc
+  namespace: ffastrans
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ffastrans-worker
+  namespace: ffastrans
+  labels:
+    app: ffastrans
+    role: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ffastrans
+      role: worker
+  template:
+    metadata:
+      labels:
+        app: ffastrans
+        role: worker
+    spec:
+      containers:
+        - name: ffastrans-worker
+          image: ffastrans-linux-mimo:latest
+          env:
+            - name: FFASTRANS_NODE_ROLE
+              value: node
+            - name: FFASTRANS_REMOTE_NODE_URL
+              value: http://ffastrans-master:8080
+            - name: FFASTRANS_MAX_CONCURRENT_JOBS
+              value: "4"
+          volumeMounts:
+            - name: drop-folders
+              mountPath: /app/drop_folders
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: drop-folders
+          persistentVolumeClaim:
+            claimName: ffastrans-drop-pvc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ffastrans-config
+  namespace: ffastrans
+data:
+  FFASTRANS_API_PORT: "8080"
+  FFASTRANS_MAX_CONCURRENT_JOBS: "4"
+  FFASTRANS_NODE_REGISTRATION_INTERVAL: "5"

@@ -1,0 +1,108 @@
+name: Build & Release Linux
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro: [ubuntu, debian, fedora, alpine]
+        include:
+          - distro: ubuntu
+            base: ubuntu:22.04
+            pkg: apt
+          - distro: debian
+            base: debian:bookworm-slim
+            pkg: apt
+          - distro: fedora
+            base: fedora:39
+            pkg: dnf
+          - distro: alpine
+            base: alpine:3.19
+            pkg: apk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building FFAStrans Linux Mimo $VERSION for ${{ matrix.distro }}"
+
+      - name: Build Docker image
+        run: |
+          docker build -t ffastrans-linux-mimo:${{ matrix.distro }}-${{ steps.version.outputs.version }} .
+
+      - name: Create standalone package
+        run: |
+          mkdir -p release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}
+          cp -r ffastrans/ release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}/
+          cp requirements.txt Dockerfile docker-compose.yml README.md release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}/
+          cp -r k8s/ release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}/
+          cp -r scripts/ release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}/
+          cp -r drop_folders/ release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}/
+          cp -r data/ release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}/
+          cd release && tar -czf ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}.tar.gz ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}/
+
+      - name: Upload Docker image
+        run: |
+          docker save ffastrans-linux-mimo:${{ matrix.distro }}-${{ steps.version.outputs.version }} | gzip > release/ffastrans-linux-mimo-${{ matrix.distro }}-${{ steps.version.outputs.version }}.docker.tar.gz
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffastrans-linux-mimo-${{ matrix.distro }}
+          path: release/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "FFAStrans Linux Mimo ${{ github.ref_name }}"
+          body: |
+            ## FFAStrans Linux Mimo ${{ github.ref_name }}
+
+            Free Workflow and Transcoding System for Linux - Docker & Kubernetes Ready
+
+            ### Available Packages
+            - Ubuntu 22.04
+            - Debian Bookworm
+            - Fedora 39
+            - Alpine 3.19
+
+            ### Quick Start with Docker Compose
+            ```bash
+            docker-compose up -d
+            ```
+
+            ### Quick Start with Kubernetes
+            ```bash
+            kubectl apply -f k8s/
+            ```
+
+            ### Access Web GUI
+            Open http://localhost:8080 in your browser
+          files: |
+            artifacts/**/*
+          draft: false
+          prerelease: false

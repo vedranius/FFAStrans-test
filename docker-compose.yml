@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  ffastrans-master:
+    build: .
+    container_name: ffastrans-master
+    hostname: ffastrans-master
+    ports:
+      - "8080:8080"
+    volumes:
+      - ffastrans-data:/app/data
+      - ffastrans-drop:/app/drop_folders
+      - ./data/workflows:/app/data/workflows
+    environment:
+      - FFASTRANS_NODE_ROLE=master
+      - FFASTRANS_API_PORT=8080
+      - FFASTRANS_MAX_CONCURRENT_JOBS=4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/about"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  ffastrans-node-1:
+    build: .
+    container_name: ffastrans-node-1
+    hostname: ffastrans-node-1
+    volumes:
+      - ffastrans-drop:/app/drop_folders
+    environment:
+      - FFASTRANS_NODE_ROLE=node
+      - FFASTRANS_REMOTE_NODE_URL=http://ffastrans-master:8080
+      - FFASTRANS_MAX_CONCURRENT_JOBS=4
+    restart: unless-stopped
+    depends_on:
+      - ffastrans-master
+
+  ffastrans-node-2:
+    build: .
+    container_name: ffastrans-node-2
+    hostname: ffastrans-node-2
+    volumes:
+      - ffastrans-drop:/app/drop_folders
+    environment:
+      - FFASTRANS_NODE_ROLE=node
+      - FFASTRANS_REMOTE_NODE_URL=http://ffastrans-master:8080
+      - FFASTRANS_MAX_CONCURRENT_JOBS=4
+    restart: unless-stopped
+    depends_on:
+      - ffastrans-master
+
+volumes:
+  ffastrans-data:
+  ffastrans-drop:
