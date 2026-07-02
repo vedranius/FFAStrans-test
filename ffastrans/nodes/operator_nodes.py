@@ -431,9 +431,12 @@ class FolderDestination(BaseNode):
     node_type = 'dest_folder'
 
     def execute(self) -> bool:
+        from ..core.config import OUTPUT_DIR
         params = self.node.params
         input_file = self.get_input_file()
         output_dir = self.resolve(params.get('path', ''))
+        if not output_dir:
+            output_dir = str(OUTPUT_DIR)
         prefix = self.resolve(params.get('prefix', ''))
         suffix = self.resolve(params.get('suffix', ''))
         overwrite = params.get('overwrite', True)

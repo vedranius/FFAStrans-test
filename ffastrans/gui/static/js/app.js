@@ -168,11 +168,14 @@ function updateHistoryTable(hist) {
         const dur = h.finished_at && h.started_at ? Math.round(h.finished_at - h.started_at) + 's' : '-';
         const outFile = h.output_file || '';
         const dlBtn = outFile ? `<button class="btn btn-xs" onclick="downloadFile('${outFile.replace(/'/g, "\\'")}')" title="Download output">&#8686;</button>` : '';
+        const state = h.state === 'completed' ? '<span class="state-badge state-completed">completed</span>' :
+                      h.state === 'failed' ? '<span class="state-badge state-failed">failed</span>' :
+                      `<span class="state-badge state-${h.state}">${h.state}</span>`;
         return `<tr>
             <td>${new Date(h.started_at*1000).toLocaleTimeString()}</td>
             <td>${h.wf_name||h.wf_id}</td>
             <td title="${h.input_file||''}">${(h.input_file||'').split('/').pop()||'-'}</td>
-            <td><span class="state-badge state-${h.state}">${h.state}</span></td>
+            <td>${state}</td>
             <td>${dur}</td>
             <td><button class="btn btn-xs" onclick="viewJobLog('${h.id}')">Log</button> ${dlBtn}</td>
         </tr>`;
@@ -221,11 +224,48 @@ function showMonitorTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => {
-        if (b.textContent.toLowerCase().includes(tab === 'running' ? 'running' : tab)) b.classList.add('active');
+        const text = b.textContent.toLowerCase();
+        if ((tab === 'running' && text.includes('running')) ||
+            (tab === 'history' && text === 'history') ||
+            (tab === 'logs' && text.includes('log')) ||
+            (tab === 'output' && text.includes('output'))) {
+            b.classList.add('active');
+        }
     });
     document.getElementById('monitor-' + tab).classList.add('active');
     if (tab === 'history') loadMonitorHistory();
     if (tab === 'logs') refreshLogJobs();
+    if (tab === 'output') loadOutputFiles();
+}
+
+async function loadOutputFiles() {
+    try {
+        const files = await API.getOutputFiles();
+        const tbody = document.querySelector('#output-files-table tbody');
+        if (!files || files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#555;padding:20px">No output files yet</td></tr>';
+            return;
+        }
+        const formatSize = (bytes) => {
+            if (!bytes) return '0 B';
+            const units = ['B','KB','MB','GB','TB'];
+            let i = 0, size = bytes;
+            while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+            return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+        };
+        tbody.innerHTML = files.map(f => `
+            <tr>
+                <td title="${f.path}">${f.name}</td>
+                <td>${formatSize(f.size)}</td>
+                <td>${new Date(f.modified * 1000).toLocaleString()}</td>
+                <td>
+                    <button class="btn btn-xs" onclick="downloadFile('${f.path.replace(/'/g, "\\'")}')">&#8686; Download</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        console.error('Load output files error:', e);
+    }
 }
 
 async function loadMonitorHistory() {
@@ -234,13 +274,15 @@ async function loadMonitorHistory() {
         const tbody = document.querySelector('#monitor-history-table tbody');
         tbody.innerHTML = hist.map(h => {
             const dur = h.finished_at && h.started_at ? Math.round(h.finished_at - h.started_at) + 's' : '-';
+            const outFile = h.output_file || '';
+            const dlBtn = outFile ? `<button class="btn btn-xs" onclick="downloadFile('${outFile.replace(/'/g, "\\'")}')" title="Download output">&#8686;</button>` : '';
             return `<tr>
                 <td>${new Date(h.started_at*1000).toLocaleString()}</td>
                 <td>${h.wf_name||h.wf_id}</td>
-                <td>${(h.input_file||'').split('/').pop()||'-'}</td>
+                <td title="${h.input_file||''}">${(h.input_file||'').split('/').pop()||'-'}</td>
                 <td><span class="state-badge state-${h.state}">${h.state}</span></td>
                 <td>${dur}</td>
-                <td><button class="btn btn-xs" onclick="viewJobLog('${h.id}')">Log</button></td>
+                <td><button class="btn btn-xs" onclick="viewJobLog('${h.id}')">Log</button> ${dlBtn}</td>
             </tr>`;
         }).join('');
     } catch(e) {}

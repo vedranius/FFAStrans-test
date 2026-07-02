@@ -458,6 +458,30 @@ async def download_file(path: str):
         raise HTTPException(500, str(e))
 
 
+@app.get("/api/output/files")
+async def list_output_files():
+    from ..core.config import OUTPUT_DIR
+    try:
+        p = Path(OUTPUT_DIR).resolve()
+        if not p.exists():
+            return []
+        files = []
+        for item in sorted(p.iterdir(), key=lambda x: x.stat().st_mtime if x.exists() else 0, reverse=True):
+            try:
+                stat = item.stat()
+                files.append({
+                    'name': item.name,
+                    'path': str(item),
+                    'size': stat.st_size,
+                    'modified': stat.st_mtime,
+                })
+            except Exception:
+                pass
+        return files
+    except Exception as e:
+        return []
+
+
 class SettingsUpdate(BaseModel):
     hostname: Optional[str] = None
     port: Optional[str] = None
@@ -494,7 +518,8 @@ ws_clients: list[WebSocket] = []
 
 @app.middleware("http")
 async def update_host_heartbeat(request: Request, call_next):
-    if request.url.path.startswith("/ws/") or request.url.path.startswith("/static"):
+    path = request.url.path
+    if path.startswith("/ws") or path.startswith("/static"):
         return await call_next(request)
     response = await call_next(request)
     try:

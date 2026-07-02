@@ -214,6 +214,7 @@ class WorkflowEngine:
             'wf_id': job.wf_id,
             'wf_name': wf.name,
             'input_file': job.input_file,
+            'output_file': job.variables.get('s_output_file', ''),
             'state': job.state.value,
             'started_at': job.started_at,
             'finished_at': job.finished_at,

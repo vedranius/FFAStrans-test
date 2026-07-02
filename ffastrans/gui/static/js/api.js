@@ -26,4 +26,5 @@ const API = {
     getPresets: () => API.get('/presets'),
     getNodes: () => API.get('/nodes/available'),
     getHosts: () => API.get('/hosts'),
+    getOutputFiles: () => API.get('/output/files'),
 };

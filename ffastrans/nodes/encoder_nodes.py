@@ -144,13 +144,15 @@ class BaseEncoder(BaseNode):
         if output:
             return output
         from pathlib import Path
+        from ..core.config import OUTPUT_DIR
         stem = Path(input_file).stem
         output_dir = self.resolve(params.get('output_dir', ''))
         if not output_dir:
             output_dir = self.resolve(params.get('work_folder', ''))
         if not output_dir:
-            output_dir = os.getenv('FFASTRANS_OUTPUT_DIR', 'drop_folders/output')
-        return str(Path(output_dir) / f'{stem}{default_ext}')
+            output_dir = str(OUTPUT_DIR)
+        result = str(Path(output_dir) / f'{stem}{default_ext}')
+        return str(Path(result).resolve())
 
     def _build_scale_filter(self, params: dict) -> str:
         w = params.get('video_width', '')
